@@ -1,7 +1,7 @@
 package com.gmail.ykomarnytskyi2022.CartaLingua.service.api;
 
-import com.gmail.ykomarnytskyi2022.CartaLingua.service.api.dto.CreateFlashCardDto;
-import com.gmail.ykomarnytskyi2022.CartaLingua.service.api.dto.FlashCardDto;
+import com.gmail.ykomarnytskyi2022.CartaLingua.dto.CreateFlashCardDto;
+import com.gmail.ykomarnytskyi2022.CartaLingua.dto.FlashCardDto;
 import org.springframework.data.domain.Page;
 
 import java.util.Optional;
