@@ -2,6 +2,8 @@ package com.gmail.ykomarnytskyi2022.CartaLingua.entity;
 
 import com.gmail.ykomarnytskyi2022.CartaLingua.enumeration.SupportedLanguages;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.Objects;
@@ -10,16 +12,20 @@ import java.util.UUID;
 @Entity
 @Table(name = "words")
 public class Word {
+    @NotNull
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @OneToMany(mappedBy = "word")
     private UUID id;
 
-    @NotNull
+    @NotEmpty
+    @NotBlank
+    @Column(nullable = false)
     private String value;
 
     @NotNull
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private SupportedLanguages language;
 
     public Word() {
@@ -27,7 +33,7 @@ public class Word {
 
     public Word(UUID id, String value, SupportedLanguages language) {
         this.id = id;
-        this.value = value;
+        this.value = value.strip();
         this.language = language;
     }
 
@@ -39,16 +45,8 @@ public class Word {
         return value;
     }
 
-    public void setValue(String value) {
-        this.value = value;
-    }
-
     public SupportedLanguages getLanguage() {
         return language;
-    }
-
-    public void setLanguage(SupportedLanguages language) {
-        this.language = language;
     }
 
     @Override
