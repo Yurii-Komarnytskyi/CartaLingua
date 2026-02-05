@@ -36,6 +36,11 @@ public class Word {
         this.language = language;
     }
 
+    public Word(String value, SupportedLanguages language) {
+        this.value = value.strip();
+        this.language = language;
+    }
+
     public UUID getId() {
         return id;
     }
