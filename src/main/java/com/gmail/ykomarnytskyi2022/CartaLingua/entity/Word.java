@@ -15,7 +15,6 @@ public class Word {
     @NotNull
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @OneToMany(mappedBy = "word")
     private UUID id;
 
     @NotEmpty
