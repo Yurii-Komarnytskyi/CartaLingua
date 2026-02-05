@@ -15,7 +15,6 @@ public class Word {
     @NotNull
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @OneToMany(mappedBy = "word")
     private UUID id;
 
     @NotEmpty
@@ -33,6 +32,11 @@ public class Word {
 
     public Word(UUID id, String value, SupportedLanguages language) {
         this.id = id;
+        this.value = value.strip();
+        this.language = language;
+    }
+
+    public Word(String value, SupportedLanguages language) {
         this.value = value.strip();
         this.language = language;
     }
