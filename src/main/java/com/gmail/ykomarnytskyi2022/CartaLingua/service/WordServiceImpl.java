@@ -42,7 +42,7 @@ public class WordServiceImpl implements WordService {
 
     @Override
     public Page<WordDto> findAllByIds(List<UUID> uuids) {
-        return wordRepo.findAllByIdIn(uuids, PageRequest.of(0, uuids.size()-1))
+        return wordRepo.findAllByIdIn(uuids, PageRequest.of(0, uuids.size()))
                 .map(word -> mapper.toWordDto(word));
     }
 
