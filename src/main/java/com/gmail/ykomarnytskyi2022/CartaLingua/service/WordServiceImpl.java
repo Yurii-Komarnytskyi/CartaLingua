@@ -6,15 +6,18 @@ import com.gmail.ykomarnytskyi2022.CartaLingua.entity.Word;
 import com.gmail.ykomarnytskyi2022.CartaLingua.mapper.WordMapper;
 import com.gmail.ykomarnytskyi2022.CartaLingua.repository.WordRepo;
 import com.gmail.ykomarnytskyi2022.CartaLingua.service.api.WordService;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@Validated
 public class WordServiceImpl implements WordService {
 
     private final WordRepo wordRepo;
@@ -26,9 +29,14 @@ public class WordServiceImpl implements WordService {
     }
 
     @Override
-    public WordDto create(CreateWordDto dto) {
-        Word saved = wordRepo.save(mapper.toWord(dto));
-        return  mapper.toWordDto(saved);
+    public WordDto create(@Valid CreateWordDto dto) {
+        Word existingWord = wordRepo.findByValueAndLanguage(dto.value(), dto.language());
+        if(existingWord != null) {
+           return mapper.toWordDto(existingWord);
+        } else {
+            Word saved = wordRepo.save(mapper.toWord(dto));
+            return  mapper.toWordDto(saved);
+        }
     }
 
     @Override
@@ -61,6 +69,6 @@ public class WordServiceImpl implements WordService {
 
     @Override
     public boolean checkIfWordExists(WordDto dto) {
-        return (dto != null && dto.id() != null)? wordRepo.existsById(dto.id()) : false;
+        return (dto != null && dto.id() != null) ? wordRepo.existsById(dto.id()) : false;
     }
 }
