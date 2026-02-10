@@ -1,0 +1,227 @@
+package com.gmail.ykomarnytskyi2022.CartaLingua.service;
+
+import com.gmail.ykomarnytskyi2022.CartaLingua.dto.CreateWordDto;
+import com.gmail.ykomarnytskyi2022.CartaLingua.dto.WordDto;
+import com.gmail.ykomarnytskyi2022.CartaLingua.entity.Word;
+import com.gmail.ykomarnytskyi2022.CartaLingua.enumeration.SupportedLanguages;
+import com.gmail.ykomarnytskyi2022.CartaLingua.mapper.WordMapper;
+import com.gmail.ykomarnytskyi2022.CartaLingua.repository.WordRepo;
+import jakarta.validation.ConstraintViolationException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class WordServiceImplTest {
+
+    @Mock
+    private WordRepo repo;
+
+    @Mock
+    private WordMapper mapper;
+
+    @Mock
+    Page<Word> wordsPage;
+
+    @InjectMocks
+    private WordServiceImpl service;
+
+    private final String CREEREN = "creëren";
+    private final UUID ID = UUID.randomUUID();
+
+    private Word word = new Word(ID, CREEREN, SupportedLanguages.DUTCH);
+    private Word wordNullId = new Word(CREEREN, SupportedLanguages.DUTCH);
+
+    private WordDto wordDto = new WordDto(ID, CREEREN, SupportedLanguages.DUTCH);
+    private CreateWordDto createWordDto = new CreateWordDto(CREEREN, SupportedLanguages.DUTCH);
+
+    @BeforeEach
+    void setUp() {
+
+    }
+
+    @AfterEach
+    void tearDown() {
+
+    }
+
+    @Test
+    @DisplayName("create() happy path")
+    void create() {
+        when(mapper.toWord(createWordDto)).thenReturn(wordNullId);
+        when(repo.save(wordNullId)).thenReturn(word);
+        when(mapper.toWordDto(word)).thenReturn(wordDto);
+
+        WordDto actual = service.create(createWordDto);
+
+        assertNotNull(actual);
+        assertNotNull(actual.id());
+        assertEquals(wordDto.id(), actual.id());
+        assertEquals(wordDto.value(), actual.value());
+        assertEquals(wordDto.language(), actual.language());
+
+        verify(repo, times(1)).save(any(Word.class));
+        verify(mapper, times(1)).toWordDto(any(Word.class));
+    }
+
+    @Test
+    @DisplayName("create() Word already exists")
+    void createWordExists() {
+        when(repo.findByValueAndLanguage(createWordDto.value(), createWordDto.language())).thenReturn(word);
+        when(mapper.toWordDto(word)).thenReturn(wordDto);
+
+        WordDto actual = service.create(createWordDto);
+
+        assertNotNull(actual);
+        assertEquals(wordDto, actual);
+
+        verify(repo, never()).save(any(Word.class));
+        verify(mapper, times(1)).toWordDto(any(Word.class));
+    }
+
+    @Test
+    @DisplayName("create() with empty value")
+    void createEmptyValue() {
+        CreateWordDto emptyValue = new CreateWordDto("", null);
+
+        when(service.create(emptyValue)).thenThrow(ConstraintViolationException.class);
+
+        assertThrowsExactly(ConstraintViolationException.class, () -> service.create(emptyValue));
+        verify(repo, never()).save(any(Word.class));
+    }
+
+    @Test
+    @DisplayName("create() with blank value")
+    void createBlankValue() {
+        CreateWordDto blankValue = new CreateWordDto(" ", null);
+        when(service.create(blankValue)).thenThrow(ConstraintViolationException.class);
+
+        assertThrowsExactly(ConstraintViolationException.class, () -> service.create(blankValue));
+
+        verify(repo, never()).save(any(Word.class));
+    }
+
+    @Test
+    @DisplayName("create() with exceeding value")
+    void createExceedingValue() {
+        CreateWordDto exceedingValue = new CreateWordDto("x".repeat(100), null);
+        when(service.create(exceedingValue)).thenThrow(ConstraintViolationException.class);
+        assertThrowsExactly(ConstraintViolationException.class, () -> service.create(exceedingValue));
+
+        verify(repo, never()).save(any(Word.class));
+    }
+
+    @Test
+    @DisplayName("findById() happy path")
+    void findById() {
+        when(repo.findById(ID)).thenReturn(Optional.of(word));
+        when(mapper.toWordDto(word)).thenReturn(wordDto);
+
+        Optional<WordDto> actual = service.findById(ID);
+        Optional<WordDto> expected = Optional.of(wordDto);
+
+        assertNotNull(actual);
+        assertEquals(actual, expected);
+
+        verify(repo, times(1)).findById(ID);
+        verify(mapper, times(1)).toWordDto(word);
+    }
+
+    @Test
+    @DisplayName("findById() with null id")
+    void findByIdNullId() {
+        Optional<WordDto> actual = service.findById(null);
+        Optional<WordDto> expected = Optional.empty();
+
+
+        assertEquals(actual, expected);
+        verify(repo, never()).findById(null);
+    }
+
+    @Test
+    @DisplayName("findAllByIds() happy path")
+    void findAllByIds() {
+        List<UUID> uuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()
+        );
+
+        List<Word> mockWords = uuids.stream()
+                .map(id -> new Word(id, "wordValue", SupportedLanguages.DUTCH))
+                .toList();
+
+        Page<Word> mockPage = new PageImpl<>(
+                mockWords,
+                PageRequest.of(0, uuids.size()),
+                mockWords.size()
+        );
+
+        when(repo.findAllByIdIn(anyList(), any(Pageable.class)))
+                .thenReturn(mockPage);
+
+        when(mapper.toWordDto(any(Word.class)))
+                .thenAnswer(invocation -> {
+                    Word word = invocation.getArgument(0);
+                    return new WordDto(word.getId(), word.getValue(), word.getLanguage());
+                });
+
+        Page<WordDto> result = service.findAllByIds(uuids);
+
+        assertThat(result.getContent())
+                .hasSize(uuids.size())
+                .extracting(WordDto::id)
+                .containsExactlyElementsOf(uuids);
+
+        assertThat(result.getNumber()).isZero();
+
+        ArgumentCaptor<List<UUID>> idListCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        verify(repo, times(1)).findAllByIdIn(
+                idListCaptor.capture(),
+                pageableCaptor.capture()
+        );
+
+        assertThat(idListCaptor.getValue())
+                .isSameAs(uuids)
+                .containsExactlyElementsOf(uuids);
+
+
+
+        Pageable capturedPageable = pageableCaptor.getValue();
+        assertThat(capturedPageable.getPageNumber()).isZero();
+        assertThat(capturedPageable.getPageSize()).isEqualTo(uuids.size());
+
+        verify(mapper, times(mockWords.size())).toWordDto(any(Word.class));
+    }
+
+    @Test
+    void update() {
+    }
+
+    @Test
+    void deleteById() {
+    }
+
+    @Test
+    void checkIfWordExists() {
+    }
+}
