@@ -7,6 +7,7 @@ import com.gmail.ykomarnytskyi2022.CartaLingua.mapper.WordMapper;
 import com.gmail.ykomarnytskyi2022.CartaLingua.repository.WordRepo;
 import com.gmail.ykomarnytskyi2022.CartaLingua.service.api.WordService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -31,11 +32,11 @@ public class WordServiceImpl implements WordService {
     @Override
     public WordDto create(@Valid CreateWordDto dto) {
         Word existingWord = wordRepo.findByValueAndLanguage(dto.value(), dto.language());
-        if(existingWord != null) {
-           return mapper.toWordDto(existingWord);
+        if (existingWord != null) {
+            return mapper.toWordDto(existingWord);
         } else {
             Word saved = wordRepo.save(mapper.toWord(dto));
-            return  mapper.toWordDto(saved);
+            return mapper.toWordDto(saved);
         }
     }
 
@@ -49,13 +50,16 @@ public class WordServiceImpl implements WordService {
     }
 
     @Override
-    public Page<WordDto> findAllByIds(List<UUID> uuids) {
+    public Page<WordDto> findAllByIds(@NotNull List<UUID> uuids) {
+        if (uuids == null || uuids.size() <= 1) {
+            throw new IllegalArgumentException("Argument List<UUID> uuids cannot be null or have size less than 2");
+        }
         return wordRepo.findAllByIdIn(uuids, PageRequest.of(0, uuids.size()))
                 .map(word -> mapper.toWordDto(word));
     }
 
     @Override
-    public WordDto update(WordDto dto) {
+    public WordDto update(@Valid WordDto dto) {
         Word saved = wordRepo.save(mapper.toWord(dto));
         return mapper.toWordDto(saved);
     }
@@ -68,7 +72,7 @@ public class WordServiceImpl implements WordService {
     }
 
     @Override
-    public boolean checkIfWordExists(WordDto dto) {
-        return (dto != null && dto.id() != null) ? wordRepo.existsById(dto.id()) : false;
+    public boolean checkIfWordExists(@Valid WordDto dto) {
+        return wordRepo.existsById(dto.id());
     }
 }
