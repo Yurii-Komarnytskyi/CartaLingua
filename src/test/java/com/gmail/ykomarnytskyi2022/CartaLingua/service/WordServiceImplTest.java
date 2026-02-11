@@ -7,6 +7,7 @@ import com.gmail.ykomarnytskyi2022.CartaLingua.enumeration.SupportedLanguages;
 import com.gmail.ykomarnytskyi2022.CartaLingua.mapper.WordMapper;
 import com.gmail.ykomarnytskyi2022.CartaLingua.repository.WordRepo;
 import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Valid;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,11 +21,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.validation.annotation.Validated;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -204,8 +208,6 @@ class WordServiceImplTest {
                 .isSameAs(uuids)
                 .containsExactlyElementsOf(uuids);
 
-
-
         Pageable capturedPageable = pageableCaptor.getValue();
         assertThat(capturedPageable.getPageNumber()).isZero();
         assertThat(capturedPageable.getPageSize()).isEqualTo(uuids.size());
@@ -214,14 +216,72 @@ class WordServiceImplTest {
     }
 
     @Test
+    @DisplayName("findAllByIds() empty list, list is null")
+    void findAllByIdsEmptyListOrNull() {
+        List<UUID> emptyList = new ArrayList<>();
+        assertThrowsExactly(IllegalArgumentException.class,
+                () -> repo.findAllByIdIn(emptyList, PageRequest.of(0, emptyList.size())));
+
+        assertThrowsExactly(IllegalArgumentException.class, () -> service.findAllByIds(null));
+    }
+
+    @Test
+    @DisplayName("update() happy path")
     void update() {
+        when(mapper.toWord(wordDto)).thenReturn(word);
+        when(repo.save(word)).thenReturn(word);
+        when(mapper.toWordDto(word)).thenReturn(wordDto);
+
+        WordDto actual = service.update(wordDto);
+        assertThat(actual).isNotNull();
+        assertEquals(actual.id(), wordDto.id());
+        assertEquals(actual.value(), wordDto.value());
+        assertEquals(actual.language(), wordDto.language());
+
+        verify(mapper, times(1)).toWord(wordDto);
+        verify(mapper, times(1)).toWordDto(word);
+        verify(repo, times(1)).save(word);
     }
 
     @Test
+    @DisplayName("update() dto with empty value")
+    void updateMalformed() {
+        WordDto wordDtoEmptyValue = new WordDto(ID, "", SupportedLanguages.DUTCH);
+
+        when(service.update(wordDtoEmptyValue)).thenThrow(ConstraintViolationException.class);
+
+        assertThrowsExactly(ConstraintViolationException.class, () -> service.update(wordDtoEmptyValue));
+        verify(repo, never()).save(any(Word.class));
+    }
+
+    @Test
+    @DisplayName("update() dto with null id")
+    void updateMalformedNullId() {
+        WordDto wordDtoNullId = new WordDto(null, "het", SupportedLanguages.DUTCH);
+
+        when(service.update(wordDtoNullId)).thenThrow(ConstraintViolationException.class);
+
+        assertThrowsExactly(ConstraintViolationException.class, () -> service.update(wordDtoNullId));
+        verify(repo, never()).save(any(Word.class));
+    }
+
+    @Test
+    @DisplayName("deleteById() happy path")
     void deleteById() {
+        doNothing().when(repo).deleteById(ID);
+
+        service.deleteById(ID);
+
+        verify(repo, times(1)).deleteById(ID);
     }
 
     @Test
+    @DisplayName("checkIfWordExists() happy path")
     void checkIfWordExists() {
+        when(repo.existsById(any(UUID.class))).thenReturn(true);
+
+        boolean actual = service.checkIfWordExists(wordDto);
+
+        assertTrue(actual);
     }
 }
