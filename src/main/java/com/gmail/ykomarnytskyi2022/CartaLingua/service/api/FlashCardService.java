@@ -5,11 +5,12 @@ import com.gmail.ykomarnytskyi2022.CartaLingua.dto.FlashCardDto;
 import org.springframework.data.domain.Page;
 
 import java.util.Optional;
+import java.util.UUID;
 
 public interface FlashCardService {
     FlashCardDto create(CreateFlashCardDto dto);
-    Optional<FlashCardDto> findById(String id);
-    Page<FlashCardDto> findAll(String id);
+    Optional<FlashCardDto> findById(UUID id);
+    Page<FlashCardDto> findAll(UUID id);
     FlashCardDto update(FlashCardDto dto);
-    void deleteById(String id);
+    void deleteById(UUID id);
 }
