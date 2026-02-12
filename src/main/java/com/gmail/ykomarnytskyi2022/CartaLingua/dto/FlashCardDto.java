@@ -7,9 +7,10 @@ import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.UUID;
 
 public record FlashCardDto(
-        @NotNull @NotBlank String id,
+        @NotNull @NotBlank UUID id,
         @NotNull @NotBlank @Min(value = 1) @Max(value = 100) String word,
         @NotNull @NotBlank @Min(value = 1) @Max(value = 100) String translation,
         Optional<String> transcription,
