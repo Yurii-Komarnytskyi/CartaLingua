@@ -15,4 +15,9 @@ public record FlashCardDto(
         Optional<String> transcription,
         @NotNull LocalDate creationDate
 ) {
+    public FlashCardDto {
+        if (transcription == null) {
+            transcription = Optional.empty();
+        }
+    }
 }
