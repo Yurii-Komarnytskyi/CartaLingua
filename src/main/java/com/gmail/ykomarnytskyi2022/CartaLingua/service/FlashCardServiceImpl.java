@@ -10,9 +10,11 @@ import com.gmail.ykomarnytskyi2022.CartaLingua.service.api.WordService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -32,22 +34,30 @@ public class FlashCardServiceImpl implements FlashCardService {
 
     @Override
     public FlashCardDto create(@Valid CreateFlashCardDto dto) {
-        return  null;
+        FlashCard saved = repo.save(mapper.toFlashCard(dto));
+        return mapper.toFlashCardDto(saved);
     }
 
     @Override
     public Optional<FlashCardDto> findById(@NotNull UUID id) {
-        return null;
+        return repo.findById(id)
+                .map((flashCard) -> mapper.toFlashCardDto(flashCard));
     }
 
     @Override
-    public Page<FlashCardDto> findAll(@NotNull UUID id) {
-        return null;
+    public Page<FlashCardDto> findAllByIds(@NotNull List<UUID> uuids) {
+        if (uuids == null || uuids.size() <= 1) {
+            throw new IllegalArgumentException("Argument List<UUID> uuids cannot be null or have size less than 2");
+        }
+        return repo.findAllByIdIn(uuids, PageRequest.of(0, uuids.size()))
+                .map((flashCard -> mapper.toFlashCardDto(flashCard)));
     }
 
     @Override
     public FlashCardDto update(@Valid FlashCardDto dto) {
-        return null;
+        wordService.update(dto.wordDto());
+        FlashCard saved = repo.save(mapper.toFlashCard(dto));
+        return mapper.toFlashCardDto(saved);
     }
 
     @Override
