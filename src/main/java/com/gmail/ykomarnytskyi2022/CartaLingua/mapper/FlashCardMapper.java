@@ -2,6 +2,7 @@ package com.gmail.ykomarnytskyi2022.CartaLingua.mapper;
 
 import com.gmail.ykomarnytskyi2022.CartaLingua.dto.CreateFlashCardDto;
 import com.gmail.ykomarnytskyi2022.CartaLingua.dto.FlashCardDto;
+import com.gmail.ykomarnytskyi2022.CartaLingua.dto.WordDto;
 import com.gmail.ykomarnytskyi2022.CartaLingua.entity.FlashCard;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,15 @@ public class FlashCardMapper {
     public FlashCard toFlashCard(@Valid CreateFlashCardDto dto) {
         return new FlashCard(
                 wordMapper.toWord(dto.createWordDto()),
+                dto.translation(),
+                dto.transcription().orElse(""),
+                dto.userBaseLanguage()
+        );
+    }
+
+    public FlashCard toFlashCardWithWordDto(@Valid CreateFlashCardDto dto, @Valid WordDto wordDto) {
+        return new FlashCard(
+                wordMapper.toWord(wordDto),
                 dto.translation(),
                 dto.transcription().orElse(""),
                 dto.userBaseLanguage()
