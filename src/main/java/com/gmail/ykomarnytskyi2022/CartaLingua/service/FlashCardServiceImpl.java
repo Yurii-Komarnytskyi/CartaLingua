@@ -1,12 +1,17 @@
 package com.gmail.ykomarnytskyi2022.CartaLingua.service;
 
 import com.gmail.ykomarnytskyi2022.CartaLingua.dto.CreateFlashCardDto;
+import com.gmail.ykomarnytskyi2022.CartaLingua.dto.CreateWordDto;
 import com.gmail.ykomarnytskyi2022.CartaLingua.dto.FlashCardDto;
+import com.gmail.ykomarnytskyi2022.CartaLingua.dto.WordDto;
 import com.gmail.ykomarnytskyi2022.CartaLingua.entity.FlashCard;
+import com.gmail.ykomarnytskyi2022.CartaLingua.entity.Word;
 import com.gmail.ykomarnytskyi2022.CartaLingua.mapper.FlashCardMapper;
 import com.gmail.ykomarnytskyi2022.CartaLingua.repository.FlashCardRepo;
 import com.gmail.ykomarnytskyi2022.CartaLingua.service.api.FlashCardService;
 import com.gmail.ykomarnytskyi2022.CartaLingua.service.api.WordService;
+import jakarta.persistence.Index;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.domain.Page;
@@ -34,7 +39,16 @@ public class FlashCardServiceImpl implements FlashCardService {
 
     @Override
     public FlashCardDto create(@Valid CreateFlashCardDto dto) {
-        FlashCard saved = repo.save(mapper.toFlashCard(dto));
+        Optional<FlashCard> flashCardPersisted = repo.findByTranslationAndUserBaseLanguage(dto.translation(), dto.userBaseLanguage());
+        CreateWordDto createWordDto = dto.createWordDto();
+        if (flashCardPersisted.isPresent()) {
+            Word word = flashCardPersisted.get().getWord();
+            if (word.getValue().equals(createWordDto.value())
+                    && word.getLanguage().equals(createWordDto.language())) {
+                return mapper.toFlashCardDto(flashCardPersisted.get());
+            }
+        }
+        FlashCard saved = repo.save(mapper.toFlashCardWithWordDto(dto, wordService.create(createWordDto)));
         return mapper.toFlashCardDto(saved);
     }
 

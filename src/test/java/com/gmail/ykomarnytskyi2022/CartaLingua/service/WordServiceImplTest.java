@@ -7,9 +7,6 @@ import com.gmail.ykomarnytskyi2022.CartaLingua.enumeration.SupportedLanguages;
 import com.gmail.ykomarnytskyi2022.CartaLingua.mapper.WordMapper;
 import com.gmail.ykomarnytskyi2022.CartaLingua.repository.WordRepo;
 import jakarta.validation.ConstraintViolationException;
-import jakarta.validation.Valid;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,14 +18,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.validation.annotation.Validated;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,9 +39,6 @@ class WordServiceImplTest {
     @Mock
     private WordMapper mapper;
 
-    @Mock
-    Page<Word> wordsPage;
-
     @InjectMocks
     private WordServiceImpl service;
 
@@ -58,16 +50,6 @@ class WordServiceImplTest {
 
     private WordDto wordDto = new WordDto(ID, CREEREN, SupportedLanguages.DUTCH);
     private CreateWordDto createWordDto = new CreateWordDto(CREEREN, SupportedLanguages.DUTCH);
-
-    @BeforeEach
-    void setUp() {
-
-    }
-
-    @AfterEach
-    void tearDown() {
-
-    }
 
     @Test
     @DisplayName("create() happy path")
