@@ -1,14 +1,7 @@
 databaseChangeLog:
-  - changeSet:
-      id: 1
-      author: Liquibase
-      changes:
-        - createTable:
-            tableName: test_table
-            columns:
-              - column:
-                  name: test_column
-                  type: INT
-                  constraints:
-                    primaryKey: true
-                    nullable: false
+ - include:
+    file: db.changelog-1-word-table.yaml
+    relativeToChangelogFile: true
+ - include:
+    file: db.changelog-2-flashcard-table.yaml
+    relativeToChangelogFile: true
