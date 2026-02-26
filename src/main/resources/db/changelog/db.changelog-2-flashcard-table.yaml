@@ -1,0 +1,56 @@
+databaseChangeLog:
+ - changeSet:
+      id: 2-create-flashcards
+      author: Yurii Komarnytskyi
+      comment: "Creates the personal flashcards table - each flashcard belongs to one user and references one shared word"
+      changes:
+        - createTable:
+            tableName: flashcards
+            remarks: "User-specific flashcards with personal translation and metadata"
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: word_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    comment: "Foreign key to the shared Word entity"
+              - column:
+                  name: translation
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+                    comment: "User's personal translation of the word"
+              - column:
+                  name: transcription
+                  type: varchar(100)
+                  constraints:
+                    nullable: true
+                    comment: "Optional phonetic transcription provided by the user"
+              - column:
+                  name: user_base_language
+                  type: varchar(40)
+                  constraints:
+                    nullable: false
+                    comment: "The user's base (native/target) language for this flashcard"
+              - column:
+                  name: creation_date
+                  type: date
+                  defaultValueComputed: CURRENT_DATE
+                  constraints:
+                    nullable: false
+                    comment: "Date when the flashcard was created"
+
+        - addForeignKeyConstraint:
+            baseTableName: flashcards
+            baseColumnNames: word_id
+            referencedTableName: words
+            referencedColumnNames: id
+            constraintName: fk_flashcard_word
+            onDelete: RESTRICT
+            onUpdate: CASCADE

@@ -1,0 +1,31 @@
+databaseChangeLog:
+ - changeSet:
+      id: 1-create-words
+      author: Yurii Komarnytskyi
+      comment: "Initial creation of the shared words table (canonical word per language)"
+      changes:
+        - createTable:
+            tableName: words
+            remarks: "Stores unique words per language (shared across users)"
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: value
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: language
+                  type: varchar(40)
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: words
+            columnNames: value, language
+            constraintName: uk_shared_words_language_word
+            comment: "Ensures no duplicate word + language combinations"
