@@ -3,17 +3,12 @@ package com.gmail.ykomarnytskyi2022.CartaLingua.service;
 import com.gmail.ykomarnytskyi2022.CartaLingua.dto.CreateFlashCardDto;
 import com.gmail.ykomarnytskyi2022.CartaLingua.dto.CreateWordDto;
 import com.gmail.ykomarnytskyi2022.CartaLingua.dto.FlashCardDto;
-import com.gmail.ykomarnytskyi2022.CartaLingua.dto.WordDto;
 import com.gmail.ykomarnytskyi2022.CartaLingua.entity.FlashCard;
 import com.gmail.ykomarnytskyi2022.CartaLingua.entity.Word;
 import com.gmail.ykomarnytskyi2022.CartaLingua.mapper.FlashCardMapper;
 import com.gmail.ykomarnytskyi2022.CartaLingua.repository.FlashCardRepo;
 import com.gmail.ykomarnytskyi2022.CartaLingua.service.api.FlashCardService;
 import com.gmail.ykomarnytskyi2022.CartaLingua.service.api.WordService;
-import jakarta.persistence.Index;
-import jakarta.transaction.Transactional;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -38,7 +33,7 @@ public class FlashCardServiceImpl implements FlashCardService {
     }
 
     @Override
-    public FlashCardDto create(@Valid CreateFlashCardDto dto) {
+    public FlashCardDto create(CreateFlashCardDto dto) {
         Optional<FlashCard> flashCardPersisted = repo.findByTranslationAndUserBaseLanguage(dto.translation(), dto.userBaseLanguage());
         CreateWordDto createWordDto = dto.createWordDto();
         if (flashCardPersisted.isPresent()) {
@@ -53,29 +48,26 @@ public class FlashCardServiceImpl implements FlashCardService {
     }
 
     @Override
-    public Optional<FlashCardDto> findById(@NotNull UUID id) {
+    public Optional<FlashCardDto> findById(UUID id) {
         return repo.findById(id)
                 .map((flashCard) -> mapper.toFlashCardDto(flashCard));
     }
 
     @Override
-    public Page<FlashCardDto> findAllByIds(@NotNull List<UUID> uuids) {
-        if (uuids == null || uuids.size() <= 1) {
-            throw new IllegalArgumentException("Argument List<UUID> uuids cannot be null or have size less than 2");
-        }
+    public Page<FlashCardDto> findAllByIds(List<UUID> uuids) {
         return repo.findAllByIdIn(uuids, PageRequest.of(0, uuids.size()))
                 .map((flashCard -> mapper.toFlashCardDto(flashCard)));
     }
 
     @Override
-    public FlashCardDto update(@Valid FlashCardDto dto) {
+    public FlashCardDto update(FlashCardDto dto) {
         wordService.update(dto.wordDto());
         FlashCard saved = repo.save(mapper.toFlashCard(dto));
         return mapper.toFlashCardDto(saved);
     }
 
     @Override
-    public void deleteById(@NotNull UUID id) {
+    public void deleteById(UUID id) {
         repo.deleteById(id);
     }
 }
