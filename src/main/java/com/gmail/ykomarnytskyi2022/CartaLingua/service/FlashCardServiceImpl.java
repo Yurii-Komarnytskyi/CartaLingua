@@ -3,6 +3,7 @@ package com.gmail.ykomarnytskyi2022.CartaLingua.service;
 import com.gmail.ykomarnytskyi2022.CartaLingua.dto.CreateFlashCardDto;
 import com.gmail.ykomarnytskyi2022.CartaLingua.dto.CreateWordDto;
 import com.gmail.ykomarnytskyi2022.CartaLingua.dto.FlashCardDto;
+import com.gmail.ykomarnytskyi2022.CartaLingua.dto.WordDto;
 import com.gmail.ykomarnytskyi2022.CartaLingua.entity.FlashCard;
 import com.gmail.ykomarnytskyi2022.CartaLingua.entity.Word;
 import com.gmail.ykomarnytskyi2022.CartaLingua.mapper.FlashCardMapper;
@@ -61,7 +62,18 @@ public class FlashCardServiceImpl implements FlashCardService {
 
     @Override
     public FlashCardDto update(FlashCardDto dto) {
-        wordService.update(dto.wordDto());
+        WordDto wordDto = dto.wordDto();
+        Optional<WordDto> persistedWord = wordService.findById(wordDto.id());
+        if (persistedWord.isPresent() && !(persistedWord.get().value().equals(wordDto.value()))) {
+            WordDto wordDtoCreated = wordService.create(new CreateWordDto(wordDto.value(), wordDto.language()));
+            dto = new FlashCardDto(dto.id(),
+                    wordDtoCreated,
+                    dto.translation(),
+                    dto.transcription(),
+                    dto.creationDate(),
+                    dto.userBaseLanguage());
+        }
+
         FlashCard saved = repo.save(mapper.toFlashCard(dto));
         return mapper.toFlashCardDto(saved);
     }
