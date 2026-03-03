@@ -33,6 +33,7 @@ public class FlashCard {
     private String transcription;
 
     @NotNull
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SupportedLanguages userBaseLanguage;
 
