@@ -90,9 +90,7 @@ class WordServiceImplTest {
     void createEmptyValue() {
         CreateWordDto emptyValue = new CreateWordDto("", null);
 
-        when(service.create(emptyValue)).thenThrow(ConstraintViolationException.class);
-
-        assertThrowsExactly(ConstraintViolationException.class, () -> service.create(emptyValue));
+        assertThrowsExactly(IllegalArgumentException.class, () -> service.create(emptyValue));
         verify(repo, never()).save(any(Word.class));
     }
 
@@ -100,9 +98,8 @@ class WordServiceImplTest {
     @DisplayName("create() with blank value")
     void createBlankValue() {
         CreateWordDto blankValue = new CreateWordDto(" ", null);
-        when(service.create(blankValue)).thenThrow(ConstraintViolationException.class);
 
-        assertThrowsExactly(ConstraintViolationException.class, () -> service.create(blankValue));
+        assertThrowsExactly(IllegalArgumentException.class, () -> service.create(blankValue));
 
         verify(repo, never()).save(any(Word.class));
     }
@@ -230,9 +227,7 @@ class WordServiceImplTest {
     void updateMalformed() {
         WordDto wordDtoEmptyValue = new WordDto(ID, "", SupportedLanguages.DUTCH);
 
-        when(service.update(wordDtoEmptyValue)).thenThrow(ConstraintViolationException.class);
-
-        assertThrowsExactly(ConstraintViolationException.class, () -> service.update(wordDtoEmptyValue));
+        assertThrowsExactly(IllegalArgumentException.class, () -> service.update(wordDtoEmptyValue));
         verify(repo, never()).save(any(Word.class));
     }
 
