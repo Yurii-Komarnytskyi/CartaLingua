@@ -8,6 +8,7 @@ import com.gmail.ykomarnytskyi2022.CartaLingua.repository.WordRepo;
 import com.gmail.ykomarnytskyi2022.CartaLingua.service.api.WordService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -31,11 +32,12 @@ public class WordServiceImpl implements WordService {
 
     @Override
     public WordDto create(@Valid CreateWordDto dto) {
-        Word existingWord = wordRepo.findByValueAndLanguage(dto.value(), dto.language());
+        CreateWordDto dtoNormalized = dto.normalizedTextInstance();
+        Word existingWord = wordRepo.findByValueAndLanguage(dtoNormalized.value(), dtoNormalized.language());
         if (existingWord != null) {
             return mapper.toWordDto(existingWord);
         } else {
-            Word saved = wordRepo.save(mapper.toWord(dto));
+            Word saved = wordRepo.save(mapper.toWord(dtoNormalized));
             return mapper.toWordDto(saved);
         }
     }
@@ -60,7 +62,7 @@ public class WordServiceImpl implements WordService {
 
     @Override
     public WordDto update(@Valid WordDto dto) {
-        Word saved = wordRepo.save(mapper.toWord(dto));
+        Word saved = wordRepo.save(mapper.toWord(dto.normalizedTextInstance()));
         return mapper.toWordDto(saved);
     }
 
