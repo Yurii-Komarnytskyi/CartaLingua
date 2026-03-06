@@ -15,5 +15,5 @@ import java.util.UUID;
 @Repository
 public interface FlashCardRepo extends JpaRepository<FlashCard, UUID> {
     Page<FlashCard> findAllByIdIn(List<UUID> id, Pageable pageable);
-    Optional<FlashCard> findByTranslationAndUserBaseLanguage(String translation, SupportedLanguages userBaseLanguage);
+    List<FlashCard> findAllByTranslationAndUserBaseLanguage(String translation, SupportedLanguages userBaseLanguage);
 }

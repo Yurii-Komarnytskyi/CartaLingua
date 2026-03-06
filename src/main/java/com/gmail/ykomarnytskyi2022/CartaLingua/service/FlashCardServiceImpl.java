@@ -35,16 +35,16 @@ public class FlashCardServiceImpl implements FlashCardService {
 
     @Override
     public FlashCardDto create(CreateFlashCardDto dto) {
-        Optional<FlashCard> flashCardPersisted = repo.findByTranslationAndUserBaseLanguage(dto.translation(), dto.userBaseLanguage());
-        CreateWordDto createWordDto = dto.createWordDto();
-        if (flashCardPersisted.isPresent()) {
-            Word word = flashCardPersisted.get().getWord();
-            if (word.getValue().equals(createWordDto.value())
-                    && word.getLanguage().equals(createWordDto.language())) {
-                return mapper.toFlashCardDto(flashCardPersisted.get());
+        CreateFlashCardDto normalized = dto.normalizedTextInstance();
+        List<FlashCard> flashCards = repo.findAllByTranslationAndUserBaseLanguage(normalized.translation(), normalized.userBaseLanguage());
+        CreateWordDto createWordDto = normalized.createWordDto().normalizedTextInstance();
+        for (var flashCard : flashCards) {
+            Word word = flashCard.getWord();
+            if (word.getValue().equals(createWordDto.value()) && word.getLanguage().equals(createWordDto.language())) {
+                return mapper.toFlashCardDto(flashCard);
             }
         }
-        FlashCard saved = repo.save(mapper.toFlashCardWithWordDto(dto, wordService.create(createWordDto)));
+        FlashCard saved = repo.save(mapper.toFlashCardWithWordDto(normalized, wordService.create(createWordDto)));
         return mapper.toFlashCardDto(saved);
     }
 
@@ -62,19 +62,21 @@ public class FlashCardServiceImpl implements FlashCardService {
 
     @Override
     public FlashCardDto update(FlashCardDto dto) {
-        WordDto wordDto = dto.wordDto();
-        Optional<WordDto> persistedWord = wordService.findById(wordDto.id());
-        if (persistedWord.isPresent() && !(persistedWord.get().value().equals(wordDto.value()))) {
-            WordDto wordDtoCreated = wordService.create(new CreateWordDto(wordDto.value(), wordDto.language()));
-            dto = new FlashCardDto(dto.id(),
-                    wordDtoCreated,
-                    dto.translation(),
-                    dto.transcription(),
-                    dto.creationDate(),
-                    dto.userBaseLanguage());
+        FlashCardDto flashCardNormalized = dto.normalizedTextInstance();
+        WordDto wordDtoNormalized = flashCardNormalized.wordDto().normalizedTextInstance();
+        boolean hasWordValueChanged = wordService.findById(wordDtoNormalized.id())
+                .filter(wordDto -> !(wordDto.value().equals(wordDtoNormalized.value())))
+                .isPresent();
+        if (hasWordValueChanged) {
+            flashCardNormalized = new FlashCardDto(flashCardNormalized.id(),
+                    wordService.create(new CreateWordDto(wordDtoNormalized.value(), wordDtoNormalized.language())),
+                    flashCardNormalized.translation(),
+                    flashCardNormalized.transcription(),
+                    flashCardNormalized.creationDate(),
+                    flashCardNormalized.userBaseLanguage());
         }
 
-        FlashCard saved = repo.save(mapper.toFlashCard(dto));
+        FlashCard saved = repo.save(mapper.toFlashCard(flashCardNormalized));
         return mapper.toFlashCardDto(saved);
     }
 
