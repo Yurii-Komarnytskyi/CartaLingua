@@ -9,7 +9,6 @@ import com.gmail.ykomarnytskyi2022.CartaLingua.entity.Word;
 import com.gmail.ykomarnytskyi2022.CartaLingua.mapper.FlashCardMapper;
 import com.gmail.ykomarnytskyi2022.CartaLingua.repository.FlashCardRepo;
 import com.gmail.ykomarnytskyi2022.CartaLingua.service.api.WordService;
-import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -83,8 +82,8 @@ class FlashCardServiceImplTest {
     @Test
     @DisplayName("create() FlashCard already exists")
     void createAlreadyExists() {
-        when(repo.findByTranslationAndUserBaseLanguage(createFlashCardDto.translation(), createFlashCardDto.userBaseLanguage()))
-                .thenReturn(Optional.of(flashCard));
+        when(repo.findAllByTranslationAndUserBaseLanguage(createFlashCardDto.translation(), createFlashCardDto.userBaseLanguage()))
+                .thenReturn(List.of(flashCard));
         when(mapper.toFlashCardDto(flashCard)).thenReturn(flashCardDto);
 
         FlashCardDto actual = flashCardService.create(createFlashCardDto);
@@ -102,9 +101,7 @@ class FlashCardServiceImplTest {
     void createInvalidDto() {
         CreateFlashCardDto invalidDto = new CreateFlashCardDto(null, null, Optional.empty(),null);
 
-        when(flashCardService.create(invalidDto)).thenThrow(ConstraintViolationException.class);
-
-        assertThrowsExactly(ConstraintViolationException.class, () -> flashCardService.create(invalidDto));
+        assertThrowsExactly(IllegalArgumentException.class, () -> flashCardService.create(invalidDto));
         verify(repo, never()).save(any(FlashCard.class));
     }
 
@@ -219,7 +216,6 @@ class FlashCardServiceImplTest {
     @Test
     @DisplayName("update() happy path")
     void update() {
-        when(wordService.update(wordDto)).thenReturn(wordDto);
         when(mapper.toFlashCard(flashCardDto)).thenReturn(flashCard);
         when(repo.save(flashCard)).thenReturn(flashCard);
         when(mapper.toFlashCardDto(flashCard)).thenReturn(flashCardDto);
@@ -229,7 +225,6 @@ class FlashCardServiceImplTest {
         assertNotNull(actual);
         assertEquals(flashCardDto, actual);
 
-        verify(wordService, times(1)).update(wordDto);
         verify(repo, times(1)).save(flashCard);
     }
 
@@ -238,9 +233,7 @@ class FlashCardServiceImplTest {
     void updateInvalid() {
         FlashCardDto invalidDto = new FlashCardDto(null, wordDto, "", Optional.empty(), LocalDate.now(), ENGLISH);
 
-        when(flashCardService.update(invalidDto)).thenThrow(ConstraintViolationException.class);
-
-        assertThrowsExactly(ConstraintViolationException.class, () -> flashCardService.update(invalidDto));
+        assertThrowsExactly(IllegalArgumentException.class, () -> flashCardService.update(invalidDto));
         verify(repo, never()).save(flashCard);
     }
 
