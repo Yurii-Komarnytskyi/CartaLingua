@@ -51,13 +51,13 @@ public class FlashCardServiceImpl implements FlashCardService {
     @Override
     public Optional<FlashCardDto> findById(UUID id) {
         return repo.findById(id)
-                .map((flashCard) -> mapper.toFlashCardDto(flashCard));
+                .map(mapper::toFlashCardDto);
     }
 
     @Override
     public Page<FlashCardDto> findAllByIds(List<UUID> uuids) {
         return repo.findAllByIdIn(uuids, PageRequest.of(0, uuids.size()))
-                .map((flashCard -> mapper.toFlashCardDto(flashCard)));
+                .map((mapper::toFlashCardDto));
     }
 
     @Override

@@ -8,7 +8,6 @@ import com.gmail.ykomarnytskyi2022.CartaLingua.repository.WordRepo;
 import com.gmail.ykomarnytskyi2022.CartaLingua.service.api.WordService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -47,7 +46,7 @@ public class WordServiceImpl implements WordService {
         if (id == null) {
             return Optional.empty();
         } else {
-            return wordRepo.findById(id).map(w -> mapper.toWordDto(w));
+            return wordRepo.findById(id).map(mapper::toWordDto);
         }
     }
 
@@ -57,7 +56,7 @@ public class WordServiceImpl implements WordService {
             throw new IllegalArgumentException("Argument List<UUID> uuids cannot be null or have size less than 2");
         }
         return wordRepo.findAllByIdIn(uuids, PageRequest.of(0, uuids.size()))
-                .map(word -> mapper.toWordDto(word));
+                .map(mapper::toWordDto);
     }
 
     @Override
