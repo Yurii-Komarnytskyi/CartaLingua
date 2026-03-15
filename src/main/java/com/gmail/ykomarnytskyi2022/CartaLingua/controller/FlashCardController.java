@@ -27,7 +27,7 @@ public class FlashCardController {
     }
 
     @PostMapping("/create")
-    ResponseEntity<FlashCardDto> create(@NotNull     @Valid @RequestBody CreateFlashCardDto dto) {
+    ResponseEntity<FlashCardDto> create(@NotNull @Valid @RequestBody CreateFlashCardDto dto) {
         return ResponseEntity
                 .status(CREATED)
                 .body(flashCardService.create(dto));
