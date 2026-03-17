@@ -10,12 +10,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -74,12 +76,13 @@ class FlashCardControllerIntegrationTest {
     }
 
     @BeforeEach
-    void insertRecordsIntoTheDb() {
+    void setUp() {
         existingFlashCardDto = service.create(createDto);
     }
 
     @AfterEach
     void tearDown() {
+        service.deleteById(existingFlashCardDto.id());
     }
 
     @Test
@@ -106,7 +109,7 @@ class FlashCardControllerIntegrationTest {
                             jsonPath("$.wordDto.language").value(createDto.createWordDto().language().toString()),
                             jsonPath("$.translation").value(createDto.translation()),
                             jsonPath("$.transcription").value(createDto.transcription().orElse("none")),
-                            jsonPath("$.creationDate").exists(),
+                            jsonPath("$.creationDate").value(LocalDate.now().toString()),
                             jsonPath("$.userBaseLanguage").value(createDto.userBaseLanguage().toString())
                     );
         }
@@ -181,7 +184,9 @@ class FlashCardControllerIntegrationTest {
     }
 
     @Test
+    @DisplayName("findAllByIds() happy path")
     void findAllByIds() {
+
     }
 
     @Test
@@ -189,6 +194,30 @@ class FlashCardControllerIntegrationTest {
     }
 
     @Test
-    void delete() {
+    @DisplayName("delete() happy path")
+    void delete() throws Exception {
+        mockMvc.perform(
+                MockMvcRequestBuilders.delete(FLASHCARD_API + "delete" )
+                        .contentType(APPLICATION_JSON)
+                        .content("\"%s\"".formatted(existingFlashCardDto.id()))
+                        .with(httpBasic)
+        ).andExpectAll(
+                status().isNoContent()
+        );
+
+        service.findById(existingFlashCardDto.id()).ifPresent( (dto) -> {
+            throw new IllegalStateException("The FlashCard record have NOT been deleted by id %s "
+                    .formatted(existingFlashCardDto.id()));
+        });
+    }
+
+    @Test
+    @DisplayName("delete() no id")
+    void deleteNoId() throws Exception {
+        mockMvc.perform(
+                MockMvcRequestBuilders.delete(FLASHCARD_API + "delete" )
+                        .contentType(APPLICATION_JSON)
+                        .with(httpBasic)
+        ).andExpect(status().isBadRequest());
     }
 }
