@@ -8,8 +8,11 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.data.web.PagedModel;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.json.JsonAssert;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.client.JsonPathAssertions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -18,14 +21,15 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static com.gmail.ykomarnytskyi2022.CartaLingua.enumeration.SupportedLanguages.DUTCH;
 import static com.gmail.ykomarnytskyi2022.CartaLingua.enumeration.SupportedLanguages.ENGLISH;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -53,6 +57,7 @@ class FlashCardControllerIntegrationTest {
     private final CreateFlashCardDto createDto = new CreateFlashCardDto(new CreateWordDto(GOEDKOOP, DUTCH),
             CHEAP, Optional.of(CHEAP_TRANSCRIPTION), ENGLISH);
     private FlashCardDto existingFlashCardDto;
+    private  final List<FlashCardDto> existingFlashCardsList =  new ArrayList<>();
 
     @Container
     static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
@@ -78,11 +83,17 @@ class FlashCardControllerIntegrationTest {
     @BeforeEach
     void setUp() {
         existingFlashCardDto = service.create(createDto);
+        List.of(
+                new CreateFlashCardDto(new CreateWordDto("windmolen", DUTCH), "windmill", Optional.empty(), ENGLISH),
+                new CreateFlashCardDto(new CreateWordDto("kanaal", DUTCH), "canal", Optional.empty(), ENGLISH),
+                new CreateFlashCardDto(new CreateWordDto("rijk", DUTCH), "rich", Optional.of("/rɪtʃ/"), ENGLISH)
+        ).forEach(dto -> existingFlashCardsList.add(service.create(dto)));
     }
 
     @AfterEach
     void tearDown() {
         service.deleteById(existingFlashCardDto.id());
+        existingFlashCardsList.clear();
     }
 
     @Test
@@ -185,8 +196,26 @@ class FlashCardControllerIntegrationTest {
 
     @Test
     @DisplayName("findAllByIds() happy path")
-    void findAllByIds() {
+    void findAllByIds() throws Exception {
+        record PaginatedFlashCards(
+                List<FlashCardDto> content,
+                PagedModel.PageMetadata page
+        ) {}
 
+        var idsJson = wrapIdsInJson(existingFlashCardsList.stream().map(FlashCardDto::id).toList());
+        var contentAsString = mockMvc.perform(
+                get(FLASHCARD_API + "findAll")
+                        .contentType(APPLICATION_JSON)
+                        .content(idsJson)
+                        .with(httpBasic)
+
+        ).andExpectAll(
+                status().isOk()
+        ).andReturn().getResponse().getContentAsString();
+
+        PaginatedFlashCards paginatedFlashCards = jsonMapper.readValue(contentAsString, PaginatedFlashCards.class);
+        assertTrue(existingFlashCardsList.containsAll(paginatedFlashCards.content));
+        assertEquals(existingFlashCardsList.size(), paginatedFlashCards.content.size());
     }
 
     @Test
@@ -219,5 +248,11 @@ class FlashCardControllerIntegrationTest {
                         .contentType(APPLICATION_JSON)
                         .with(httpBasic)
         ).andExpect(status().isBadRequest());
+    }
+
+    private String wrapIdsInJson(List<UUID> ids) {
+        return ids.stream()
+                .map(id -> "\"%s\"".formatted(id.toString()))
+                .collect(Collectors.joining(",", "[", "]"));
     }
 }
