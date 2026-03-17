@@ -2,6 +2,8 @@ package com.gmail.ykomarnytskyi2022.CartaLingua.controller;
 
 import com.gmail.ykomarnytskyi2022.CartaLingua.dto.CreateFlashCardDto;
 import com.gmail.ykomarnytskyi2022.CartaLingua.dto.CreateWordDto;
+import com.gmail.ykomarnytskyi2022.CartaLingua.dto.FlashCardDto;
+import com.gmail.ykomarnytskyi2022.CartaLingua.service.api.FlashCardService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,11 +18,14 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static com.gmail.ykomarnytskyi2022.CartaLingua.enumeration.SupportedLanguages.DUTCH;
 import static com.gmail.ykomarnytskyi2022.CartaLingua.enumeration.SupportedLanguages.ENGLISH;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,14 +39,18 @@ class FlashCardControllerIntegrationTest {
     private final FlashCardController controller;
     private final MockMvc mockMvc;
     private final JsonMapper jsonMapper;
+    private final FlashCardService service;
+
     private final RequestPostProcessor httpBasic = httpBasic("user", "password");
     private final String FLASHCARD_API = "http://localhost:8080/api/flashcard/";
     private final String APPLICATION_JSON = "application/json";
     private final String CHEAP = "cheap";
     private final String CHEAP_TRANSCRIPTION = "/tʃiːp/";
     private final String GOEDKOOP = "goedkoop";
+
     private final CreateFlashCardDto createDto = new CreateFlashCardDto(new CreateWordDto(GOEDKOOP, DUTCH),
             CHEAP, Optional.of(CHEAP_TRANSCRIPTION), ENGLISH);
+    private FlashCardDto existingFlashCardDto;
 
     @Container
     static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
@@ -57,14 +66,16 @@ class FlashCardControllerIntegrationTest {
     }
 
     @Autowired
-    public FlashCardControllerIntegrationTest(FlashCardController controller, MockMvc mockMvc, JsonMapper jsonMapper) {
+    public FlashCardControllerIntegrationTest(FlashCardController controller, MockMvc mockMvc, JsonMapper jsonMapper, FlashCardService flashCardService) {
         this.controller = controller;
         this.mockMvc = mockMvc;
         this.jsonMapper = jsonMapper;
+        this.service = flashCardService;
     }
 
     @BeforeEach
-    void setUp() {
+    void insertRecordsIntoTheDb() {
+        existingFlashCardDto = service.create(createDto);
     }
 
     @AfterEach
@@ -133,7 +144,40 @@ class FlashCardControllerIntegrationTest {
     }
 
     @Test
-    void findById() {
+    @DisplayName("findById() happy path")
+    void findById() throws Exception {
+        String foundById = mockMvc.perform(
+                get(FLASHCARD_API + "find")
+                        .contentType(APPLICATION_JSON)
+                        .content("\"%s\"".formatted(existingFlashCardDto.id()))
+                        .with(httpBasic)
+        )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        FlashCardDto actual = jsonMapper.readValue(foundById, FlashCardDto.class);
+        assertEquals(existingFlashCardDto, actual);
+    }
+
+    @Test
+    @DisplayName("findById() not found")
+    void findByFalsyId() throws Exception {
+        mockMvc.perform(
+                get(FLASHCARD_API + "find")
+                        .contentType(APPLICATION_JSON)
+                        .content("\"%s\"".formatted(UUID.randomUUID()))
+                        .with(httpBasic))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("findById() null id")
+    void findByNullId() throws Exception {
+        mockMvc.perform(
+                        get(FLASHCARD_API + "find")
+                                .contentType(APPLICATION_JSON)
+                                .with(httpBasic))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
