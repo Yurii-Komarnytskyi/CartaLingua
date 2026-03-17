@@ -30,7 +30,7 @@ public class WordServiceImpl implements WordService {
     }
 
     @Override
-    public WordDto create(@Valid CreateWordDto dto) {
+    public WordDto create(CreateWordDto dto) {
         CreateWordDto dtoNormalized = dto.normalizedTextInstance();
         Word existingWord = wordRepo.findByValueAndLanguage(dtoNormalized.value(), dtoNormalized.language());
         if (existingWord != null) {
@@ -51,7 +51,7 @@ public class WordServiceImpl implements WordService {
     }
 
     @Override
-    public Page<WordDto> findAllByIds(@NotNull List<UUID> uuids) {
+    public Page<WordDto> findAllByIds(List<UUID> uuids) {
         if (uuids == null || uuids.size() <= 1) {
             throw new IllegalArgumentException("Argument List<UUID> uuids cannot be null or have size less than 2");
         }
@@ -60,7 +60,7 @@ public class WordServiceImpl implements WordService {
     }
 
     @Override
-    public WordDto update(@Valid WordDto dto) {
+    public WordDto update(WordDto dto) {
         Word saved = wordRepo.save(mapper.toWord(dto.normalizedTextInstance()));
         return mapper.toWordDto(saved);
     }
@@ -73,7 +73,7 @@ public class WordServiceImpl implements WordService {
     }
 
     @Override
-    public boolean checkIfWordExists(@Valid WordDto dto) {
+    public boolean checkIfWordExists(WordDto dto) {
         return wordRepo.existsById(dto.id());
     }
 }
