@@ -21,10 +21,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.gmail.ykomarnytskyi2022.CartaLingua.enumeration.SupportedLanguages.DUTCH;
@@ -58,6 +55,11 @@ class FlashCardControllerIntegrationTest {
             CHEAP, Optional.of(CHEAP_TRANSCRIPTION), ENGLISH);
     private FlashCardDto existingFlashCardDto;
     private  final List<FlashCardDto> existingFlashCardsList =  new ArrayList<>();
+
+    record PaginatedFlashCards(
+            List<FlashCardDto> content,
+            PagedModel.PageMetadata page
+    ) {}
 
     @Container
     static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
@@ -197,25 +199,74 @@ class FlashCardControllerIntegrationTest {
     @Test
     @DisplayName("findAllByIds() happy path")
     void findAllByIds() throws Exception {
-        record PaginatedFlashCards(
-                List<FlashCardDto> content,
-                PagedModel.PageMetadata page
-        ) {}
-
-        var idsJson = wrapIdsInJson(existingFlashCardsList.stream().map(FlashCardDto::id).toList());
-        var contentAsString = mockMvc.perform(
+        String content = mockMvc.perform(
                 get(FLASHCARD_API + "findAll")
                         .contentType(APPLICATION_JSON)
-                        .content(idsJson)
+                        .content(wrapIdsInJson(existingFlashCardsList))
                         .with(httpBasic)
 
-        ).andExpectAll(
+        ).andExpect(
                 status().isOk()
         ).andReturn().getResponse().getContentAsString();
 
-        PaginatedFlashCards paginatedFlashCards = jsonMapper.readValue(contentAsString, PaginatedFlashCards.class);
+        PaginatedFlashCards paginatedFlashCards = jsonMapper.readValue(content, PaginatedFlashCards.class);
         assertTrue(existingFlashCardsList.containsAll(paginatedFlashCards.content));
         assertEquals(existingFlashCardsList.size(), paginatedFlashCards.content.size());
+    }
+
+    @Test
+    @DisplayName("findAllByIds() with SOME invalid uuids i.e records do NOT exist")
+    void findAllByIdsInvalidIds() throws Exception {
+        final int sizeBeforeCorruption = existingFlashCardsList.size();
+        for (int i = 0; i < 10; i++) {
+            existingFlashCardsList.add(new FlashCardDto(UUID.randomUUID(), null, null, null, null, null));
+        }
+
+        String content = mockMvc.perform(
+                get(FLASHCARD_API + "findAll")
+                        .contentType(APPLICATION_JSON)
+                        .content(wrapIdsInJson(existingFlashCardsList))
+                        .with(httpBasic)
+
+        ).andExpect(
+                status().isOk()
+        ).andReturn().getResponse().getContentAsString();
+
+        PaginatedFlashCards paginatedFlashCards = jsonMapper.readValue(content, PaginatedFlashCards.class);
+        assertTrue(existingFlashCardsList.containsAll(paginatedFlashCards.content));
+        assertEquals(sizeBeforeCorruption, paginatedFlashCards.content.size());
+    }
+
+    @Test
+    @DisplayName("findAllByIds() with ONLY invalid uuids i.e records do NOT exist")
+    void findAllByIdsOnlyInvalidIds() throws Exception {
+        existingFlashCardsList.clear();
+        for (int i = 0; i < 10; i++) {
+            existingFlashCardsList.add(new FlashCardDto(UUID.randomUUID(), null, null, null, null, null));
+        }
+
+        mockMvc.perform(
+                get(FLASHCARD_API + "findAll")
+                        .contentType(APPLICATION_JSON)
+                        .content(wrapIdsInJson(existingFlashCardsList))
+                        .with(httpBasic)
+
+        ).andExpect(
+                status().isNotFound()
+        );
+    }
+
+    @Test
+    @DisplayName("findAllByIds() Min size List<UUID> check")
+    void findAllByIdsMinSize() throws Exception {
+        final List<UUID> emptyList = List.of();
+        mockMvc.perform(
+                get(FLASHCARD_API + "findAll")
+                        .contentType(APPLICATION_JSON)
+                        .content(emptyList.toString())
+                        .with(httpBasic)
+
+        ).andExpect(status().isBadRequest());
     }
 
     @Test
@@ -250,9 +301,9 @@ class FlashCardControllerIntegrationTest {
         ).andExpect(status().isBadRequest());
     }
 
-    private String wrapIdsInJson(List<UUID> ids) {
+    private String wrapIdsInJson(List<FlashCardDto> ids) {
         return ids.stream()
-                .map(id -> "\"%s\"".formatted(id.toString()))
+                .map(dto -> "\"%s\"".formatted(dto.id().toString()))
                 .collect(Collectors.joining(",", "[", "]"));
     }
 }
