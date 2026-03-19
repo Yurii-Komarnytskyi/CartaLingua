@@ -60,11 +60,10 @@ public class FlashCardController {
         }
     }
 
-    @PutMapping("/update") ResponseEntity<?> update(@NotNull @Valid @RequestBody FlashCardDto dto) {
-        flashCardService.update(dto);
+    @PutMapping("/update") ResponseEntity<FlashCardDto> update(@NotNull @Valid @RequestBody FlashCardDto dto) {
         return ResponseEntity
-                .noContent()
-                .build();
+                .status(CREATED)
+                .body(flashCardService.update(dto));
     }
 
     @DeleteMapping("/delete") ResponseEntity<?> delete(@NotNull @RequestBody UUID id) {
