@@ -3,16 +3,16 @@ package com.gmail.ykomarnytskyi2022.CartaLingua.controller;
 import com.gmail.ykomarnytskyi2022.CartaLingua.dto.CreateFlashCardDto;
 import com.gmail.ykomarnytskyi2022.CartaLingua.dto.CreateWordDto;
 import com.gmail.ykomarnytskyi2022.CartaLingua.dto.FlashCardDto;
+import com.gmail.ykomarnytskyi2022.CartaLingua.dto.WordDto;
 import com.gmail.ykomarnytskyi2022.CartaLingua.service.api.FlashCardService;
+import com.gmail.ykomarnytskyi2022.CartaLingua.service.api.WordService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.data.web.PagedModel;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.json.JsonAssert;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.client.JsonPathAssertions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -21,15 +21,17 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static com.gmail.ykomarnytskyi2022.CartaLingua.enumeration.SupportedLanguages.DUTCH;
 import static com.gmail.ykomarnytskyi2022.CartaLingua.enumeration.SupportedLanguages.ENGLISH;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -42,7 +44,8 @@ class FlashCardControllerIntegrationTest {
     private final FlashCardController controller;
     private final MockMvc mockMvc;
     private final JsonMapper jsonMapper;
-    private final FlashCardService service;
+    private final FlashCardService flashCardService;
+    private final WordService wordService;
 
     private final RequestPostProcessor httpBasic = httpBasic("user", "password");
     private final String FLASHCARD_API = "http://localhost:8080/api/flashcard/";
@@ -75,26 +78,33 @@ class FlashCardControllerIntegrationTest {
     }
 
     @Autowired
-    public FlashCardControllerIntegrationTest(FlashCardController controller, MockMvc mockMvc, JsonMapper jsonMapper, FlashCardService flashCardService) {
+    public FlashCardControllerIntegrationTest(
+            FlashCardController controller,
+            MockMvc mockMvc,
+            JsonMapper jsonMapper,
+            FlashCardService flashCardService,
+            WordService wordService
+    ) {
         this.controller = controller;
         this.mockMvc = mockMvc;
         this.jsonMapper = jsonMapper;
-        this.service = flashCardService;
+        this.flashCardService = flashCardService;
+        this.wordService = wordService;
     }
 
     @BeforeEach
     void setUp() {
-        existingFlashCardDto = service.create(createDto);
+        existingFlashCardDto = flashCardService.create(createDto);
         List.of(
                 new CreateFlashCardDto(new CreateWordDto("windmolen", DUTCH), "windmill", Optional.empty(), ENGLISH),
                 new CreateFlashCardDto(new CreateWordDto("kanaal", DUTCH), "canal", Optional.empty(), ENGLISH),
                 new CreateFlashCardDto(new CreateWordDto("rijk", DUTCH), "rich", Optional.of("/rɪtʃ/"), ENGLISH)
-        ).forEach(dto -> existingFlashCardsList.add(service.create(dto)));
+        ).forEach(dto -> existingFlashCardsList.add(flashCardService.create(dto)));
     }
 
     @AfterEach
     void tearDown() {
-        service.deleteById(existingFlashCardDto.id());
+        flashCardService.deleteById(existingFlashCardDto.id());
         existingFlashCardsList.clear();
     }
 
@@ -270,7 +280,95 @@ class FlashCardControllerIntegrationTest {
     }
 
     @Test
-    void update() {
+    @DisplayName("update() happy path, WordDto::value NOT changed")
+    void updateSameValue() throws Exception {
+        FlashCardDto updatedFlashCardDto = new FlashCardDto(
+                existingFlashCardDto.id(),
+                existingFlashCardDto.wordDto(),
+                "inexpensive",
+                Optional.of("/ˌɪnɪkˈspensɪv/"),
+                existingFlashCardDto.creationDate(),
+                ENGLISH
+        );
+
+        String contentAsString = mockMvc.perform(
+                        put(FLASHCARD_API + "update")
+                                .contentType(APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(updatedFlashCardDto))
+                                .with(httpBasic)
+                )
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+
+        FlashCardDto flashCardDto = jsonMapper.readValue(contentAsString, FlashCardDto.class);
+        assertEquals(updatedFlashCardDto.wordDto(), flashCardDto.wordDto());
+    }
+
+    @Test
+    @DisplayName("update() happy path, WordDto::value IS changed")
+    void updateNewValue() throws Exception {
+        FlashCardDto updatedFlashCardDto = new FlashCardDto(
+                existingFlashCardDto.id(),
+                new WordDto(existingFlashCardDto.wordDto().id(), "betaalbaar", DUTCH),
+                existingFlashCardDto.translation(),
+                existingFlashCardDto.transcription(),
+                existingFlashCardDto.creationDate(),
+                ENGLISH
+        );
+        WordDto wordDtoWithOriginalId = updatedFlashCardDto.wordDto();
+        String contentAsString = mockMvc.perform(
+                put(FLASHCARD_API + "update")
+                    .contentType(APPLICATION_JSON)
+                    .content(jsonMapper.writeValueAsString(updatedFlashCardDto))
+                    .with(httpBasic)
+                )
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        FlashCardDto flashCardDto = jsonMapper.readValue(contentAsString, FlashCardDto.class);
+
+        assertTrue(wordService.findById(wordDtoWithOriginalId.id()).isPresent());
+        assertNotEquals(wordDtoWithOriginalId, flashCardDto.wordDto());
+        assertEquals(updatedFlashCardDto.translation(), flashCardDto.translation());
+        assertEquals(updatedFlashCardDto.transcription(), flashCardDto.transcription());
+    }
+
+    @Test
+    @DisplayName("update() FlashCard::creationDate does NOT change")
+    void updateNewCreationdate() throws Exception {
+        LocalDate yearAgo = LocalDate.now().minusYears(1);
+        FlashCardDto updatedFlashCardDto = new FlashCardDto(
+                existingFlashCardDto.id(),
+                new WordDto(existingFlashCardDto.wordDto().id(), "betaalbaar", DUTCH),
+                existingFlashCardDto.translation(),
+                existingFlashCardDto.transcription(),
+                yearAgo,
+                ENGLISH
+        );
+
+        String contentAsString = mockMvc.perform(
+                        put(FLASHCARD_API + "update")
+                                .contentType(APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(updatedFlashCardDto))
+                                .with(httpBasic)
+                )
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        FlashCardDto flashCardDto = jsonMapper.readValue(contentAsString, FlashCardDto.class);
+        assertNotEquals(flashCardDto.creationDate(), yearAgo);
+    }
+
+    @Test
+    @DisplayName("update() null FlashCardDto")
+    void updateNoFlashCardDto() throws Exception {
+        mockMvc.perform(
+                    put(FLASHCARD_API + "update")
+                        .contentType(APPLICATION_JSON)
+                        .with(httpBasic)
+                )
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -285,7 +383,7 @@ class FlashCardControllerIntegrationTest {
                 status().isNoContent()
         );
 
-        service.findById(existingFlashCardDto.id()).ifPresent( (dto) -> {
+        flashCardService.findById(existingFlashCardDto.id()).ifPresent( (dto) -> {
             throw new IllegalStateException("The FlashCard record have NOT been deleted by id %s "
                     .formatted(existingFlashCardDto.id()));
         });
