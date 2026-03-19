@@ -27,7 +27,7 @@ public class FlashCardController {
     }
 
     @PostMapping("/create")
-    ResponseEntity<FlashCardDto> create(@NotNull     @Valid @RequestBody CreateFlashCardDto dto) {
+    ResponseEntity<FlashCardDto> create(@NotNull @Valid @RequestBody CreateFlashCardDto dto) {
         return ResponseEntity
                 .status(CREATED)
                 .body(flashCardService.create(dto));
@@ -60,11 +60,10 @@ public class FlashCardController {
         }
     }
 
-    @PutMapping("/update") ResponseEntity<?> update(@NotNull @Valid @RequestBody FlashCardDto dto) {
-        flashCardService.update(dto);
+    @PutMapping("/update") ResponseEntity<FlashCardDto> update(@NotNull @Valid @RequestBody FlashCardDto dto) {
         return ResponseEntity
-                .noContent()
-                .build();
+                .status(CREATED)
+                .body(flashCardService.update(dto));
     }
 
     @DeleteMapping("/delete") ResponseEntity<?> delete(@NotNull @RequestBody UUID id) {
